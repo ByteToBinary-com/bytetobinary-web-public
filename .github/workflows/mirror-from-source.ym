@@ -2,8 +2,6 @@ name: Mirror main branch from bytetobinary-web
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 * * * *" # Every hour; adjust as needed
 
 permissions:
   contents: write
