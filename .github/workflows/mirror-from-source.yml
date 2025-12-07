@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ env.DEST_BRANCH }}
-          token: ${{ secrets.GH_PAT }}
+          token: ${{ secrets.GH_PAT }} # PAT with read to source, write to destination
 
       - name: Configure git
         run: |
@@ -32,14 +32,22 @@ jobs:
         run: |
           git clone --depth=1 --branch "${SOURCE_BRANCH}" "https://${{ secrets.GH_PAT }}@github.com/${SOURCE_REPO}.git" source
 
-      - name: Sync source -> destination (preserve workflow)
+      - name: Sync source -> destination (preserve workflow, delete after transfer)
         run: |
-          sudo apt-get update && sudo apt-get install -y rsync
-          # Mirror files, delete removed files, but keep workflow directory
-          rsync -a --delete \
+          sudo apt-get update && sudo apt-get install -y rsync || true
+          # Mirror files, delete removed files after transfer; preserve GitHub workflow/config
+          rsync -a \
+            --delete-after \
+            --omit-dir-times \
+            --no-perms \
             --exclude '.git/' \
-            --exclude '.github/workflows/' \
+            --exclude '.github/' \
+            --exclude 'source/' \
+            --info=stats2 \
             source/ ./
+
+      - name: Clean up source directory
+        run: rm -rf source
 
       - name: Commit changes if any
         run: |
@@ -52,7 +60,6 @@ jobs:
 
       - name: Push to destination
         run: |
-          # Only push if we have commits ahead
           if [ -n "$(git log origin/${DEST_BRANCH}..HEAD)" ]; then
             git push origin "${DEST_BRANCH}"
           else
