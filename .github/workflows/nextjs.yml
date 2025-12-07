@@ -36,7 +36,6 @@ jobs:
             echo "export=yarn next export" >> $GITHUB_OUTPUT
           elif [ -f "${{ github.workspace }}/package.json" ]; then
             echo "manager=npm" >> $GITHUB_OUTPUT
-            # Prefer npm ci when lock is present
             if [ -f "${{ github.workspace }}/package-lock.json" ] || [ -f "${{ github.workspace }}/npm-shrinkwrap.json" ]; then
               echo "install=npm ci" >> $GITHUB_OUTPUT
             else
@@ -63,12 +62,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx', '**.ts', '**.tsx') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.[jt]s', '**/*.[jt]sx', '**/*.ts', '**/*.tsx') }}
           restore-keys: |
             ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json', '**/yarn.lock', '**/pnpm-lock.yaml') }}-
 
       - name: Install dependencies
-        run: ${{ steps.detect-package-manager.outputs.install }
+        run: ${{ steps.detect-package-manager.outputs.install }}
 
       - name: Build with Next.js
         run: ${{ steps.detect-package-manager.outputs.build }}
