@@ -1,0 +1,59 @@
+name: Mirror main branch from bytetobinary-web
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  SOURCE_REPO: ByteToBinary-com/bytetobinary-web
+  SOURCE_BRANCH: main
+  DEST_BRANCH: main
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout destination repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEST_BRANCH }}
+          token: ${{ secrets.GH_PAT }} # Needed to push back to this repo
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Clean workspace (except .git)
+        run: |
+          find . -maxdepth 1 -not -path './.git' -not -path '.' -exec rm -rf {} +
+
+      - name: Clone source repo
+        run: |
+          # Use PAT for private repos; ensure GH_PAT has read access to source and write to destination
+          git clone --depth=1 --branch "${SOURCE_BRANCH}" "https://${{ secrets.GH_PAT }}@github.com/${SOURCE_REPO}.git" source
+
+      - name: Copy source contents into destination
+        run: |
+          shopt -s dotglob
+          cp -r source/* .
+          # Include root dotfiles if present
+          cp -r source/.* . 2>/dev/null || true
+
+      - name: Remove source checkout
+        run: rm -rf source
+
+      - name: Commit changes if any
+        run: |
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Mirror from ${SOURCE_REPO}@${SOURCE_BRANCH}"
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Push to destination
+        run: |
+          git push origin "${DEST_BRANCH}"
